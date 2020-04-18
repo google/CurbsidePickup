@@ -2,6 +2,8 @@ Curbside Pick-up Framework!
 
 A simple small business solution to enable curbside pick-up.
 
+Disclaimer: This is not an officially supported Google product.
+
 ################## What is it? ##################
 
 A simple, free Google Sheets and Google Forms solution to help Canadian small businesses enable curbside pickup for their products during the COVID-19 pandemic. The solution requires minimum setup and technical maintenance. 
