@@ -1,18 +1,5 @@
-/*
- *Copyright 2020 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
- */
+// Copyright 2020 Google LLC.
+// SPDX-License-Identifier: Apache-2.0
 
 var ss = SpreadsheetApp.getActive();
 var inventorySheet = ss.getSheetByName("Inventory");
@@ -20,10 +7,14 @@ var infoSheet = ss.getSheetByName("Info");
 var ordersSheet = ss.getSheetByName("Orders");
 var formLinksSheet = ss.getSheetByName("Form Links");
 
+var isFirstScriptExecution = false;
+
 function onOpen() {
-  var menu = [{name: 'Update Order Menu', functionName: 'main'}];
+  var menu = [{name: 'Authorize Curbside Pickup', functionName: 'authorize'}, {name: 'Update Order Menu', functionName: 'main'}];
   SpreadsheetApp.getActive().addMenu('Curbside Pickup', menu);
 }
+
+function authorize(){}
 
 function main(){
   //Removing existing triggers
@@ -32,11 +23,21 @@ function main(){
     ScriptApp.deleteTrigger(triggers[i]);
   }
   // Creating form for customers to place an order
-  createOrderForm();
+  var formURL = createOrderForm();
   // Creating form for employees to reply to the order and update the customer
   createOrderUpdateForm();
+  
+  // If this script is being run for the first time, send welcome email with link to the order form & details on where to find these on the spreadsheet.
+  if(isFirstScriptExecution) {
+    var infoData = infoSheet.getDataRange().getValues();
+    var storeEmail = infoData[1][3];
+    var storeName = infoData[1][0];
+    sendWelcomeEmail(storeName, storeEmail, ss.getUrl(), formURL);
+    isFirstScriptExecution = false;
+  }
+
   // Setting up the scheduler
-  ScriptApp.newTrigger("main").timeBased().everyMinutes(15).create();
+  ScriptApp.newTrigger("main").timeBased().everyHours(1).create();
 }
 
 function createOrderForm() {
@@ -58,13 +59,43 @@ function createOrderForm() {
     ];
     range.setWrap(true); 
     range.setValues(formURLs);
+    isFirstScriptExecution = true;
   }
   else {
     var orderFormURL = formLinksSheet.getDataRange().getValues()[1][2]+"";
     orderForm = FormApp.openByUrl(orderFormURL);
   }
   orderForm.setTitle('Curbside Pickup!');
-  orderForm.setDescription("Please see the below list of all menu items that are currently available." + "\nPlease select how many units of each items you want to order." + "\nPrices doesn't include HST");
+
+  // Building the form's description
+  var openingTime = infoData[1][5];
+  var closingTime = infoData[1][6];
+  var daysOpen = infoData[1][7];
+  var standardPickupTime = infoData[1][8];
+  var additionalNotes = infoData[1][9];
+  var menuItemsSentence = "You can see the below list of all menu items that are currently available." + 
+    "\nPlease select how many units of each items you want to order." + 
+    "\nPrices don't include HST";
+
+  var detailedDesc = ""
+  if (openingTime != "" && closingTime != ""){
+    detailedDesc += "We are open from " + openingTime + " to " + closingTime;
+  }
+  if (daysOpen != ""){
+    detailedDesc == "" ? detailedDesc += "We are open " + daysOpen : detailedDesc += ",  " + daysOpen;
+  }
+  if (standardPickupTime != ""){
+    if(detailedDesc != ""){
+      detailedDesc += "\n";
+    }
+    detailedDesc += "Our orders are ready for pickup on an average of " + standardPickupTime + " minutes.";
+  }  
+  if (additionalNotes != ""){
+    detailedDesc == "" ? detailedDesc += additionalNotes : detailedDesc += "\n\n" + additionalNotes;
+  }  
+  detailedDesc == "" ? detailedDesc += menuItemsSentence : detailedDesc += "\n\n" + menuItemsSentence;
+
+  orderForm.setDescription(detailedDesc);
   // Clear the order form
   var itemsToDelete = orderForm.getItems();
   while (itemsToDelete.length > 0) {
@@ -72,7 +103,7 @@ function createOrderForm() {
     orderForm.deleteItem(itemToDelete);
   }
   Logger.log('Cleared old version of Order Form');
-  orderForm.setTitle(storeName + " Menu");
+  orderForm.setTitle(storeName + " Curbside Pickup Menu");
   // Repopulate the order form
   for (i = 1; i < data.length; i++) {
     if ( data[i][2] != "no") {
@@ -102,6 +133,7 @@ function createOrderForm() {
   // Creating the trigger for sending emails on order form submissions
   var x = ScriptApp.newTrigger('onOrderFormSubmit').forForm(orderForm).onFormSubmit().create();
   Logger.log("Created Order Form");
+  return orderForm.getPublishedUrl();
 }
 
 function onOrderFormSubmit(e) {
@@ -128,37 +160,52 @@ function onOrderFormSubmit(e) {
   var email = responseMap.get("What is your email address?")
   var phoneNumber = responseMap.get("What is your phone number?")
   var comments = responseMap.get("Do you have any specific comments?")
-  var orderItemsStringEmailFormat = "<br>";
-  var orderItemsStringSheetsFormat = "=CONCATENATE(";
-  responseOrdersSet.forEach(item => {
-    orderItemsStringEmailFormat += "<b>   x " + item[1] + "</b>  " + item[0] + "<br>";
-    orderItemsStringSheetsFormat += "\" x "+ item[1] + " " + item[0] + "\", CHAR(10), ";
-  });
-  orderItemsStringSheetsFormat = orderItemsStringSheetsFormat.substr(0, orderItemsStringSheetsFormat.length-12);
-  orderItemsStringSheetsFormat += ")";
-  // Log the order in the spreadsheet
-  var range = ordersSheet.getRange(ordersSheet.getLastRow() + 1, 1, 1, 7);
-  var d = new Date();
-  var timeStamp = d.getTime(); 
-  var currentTime = d.toLocaleTimeString();
-  var order = [
-    [ timeStamp, currentTime, orderItemsStringSheetsFormat, comments, name, email, phoneNumber ]
-  ];
-  range.setWrap(true); 
-  range.setValues(order);
-  var updateFormPublicURL = formLinksSheet.getDataRange().getValues()[2][1];
-  // Send Customer Email
-  MailApp.sendEmail({
-    to: email,
-    subject: "Thank you for your order " + name + "!",
-    htmlBody: "Hi " + name + "!<br><br>We've got your order and are working through it as fast as we can.<br> Your order ID is <b>" + timeStamp + "</b>.<br>We will send you an update once you know the exact pick up time.<br><br>Here are the contents of your order:" + orderItemsStringEmailFormat + "<br><br>---------------------<br><br>Please don't hesitate to reach out to use in case you have any questions, and Thank you for your order!!<br><br>" + storeName + "<br>" + storeNumber + "<br>" + storeEmail + "<br>" + storeAddress + "<br>"
-  });
-  // Send Store Email
-  MailApp.sendEmail({
-    to: storeEmail,
-    subject: "New order for " + storeName + "!",
-    htmlBody: "Hi " + storeName + "!<br><br>You've got a new order (order ID: <b>" + timeStamp + "</b>): " + orderItemsStringEmailFormat + "<br><br>Please click <a href='" + updateFormPublicURL + "'>this link</a> to update the customer on the pickup time."
-  });
+  
+  // Accounting for the scennario where the customer didn't select anything in the menu - ask the customer to submit another request.
+  if(responseOrdersSet.size == 0){
+    var orderFormPublicURL = formLinksSheet.getDataRange().getValues()[1][1];
+    // Send Customer Email
+    MailApp.sendEmail({
+      to: email,
+      subject: "Sorry! There was an issue with your order " + name + " at " + storeName,
+      htmlBody: "Hi " + name + "!<br><br>We've got your order request but unfortunately we did not record any item selection from our menu." + 
+      "<br><br>Please click <a href='" + orderFormPublicURL + "'>this link</a> to submit a new order." +
+      "<br><br>---------------------<br><br>" + storeName + "<br>" + storeNumber + "<br>" + storeEmail + "<br>" + storeAddress + "<br>"
+    });
+  }
+  else{
+    var orderItemsStringEmailFormat = "<br>";
+    var orderItemsStringSheetsFormat = "=CONCATENATE(";
+    responseOrdersSet.forEach(item => {
+      orderItemsStringEmailFormat += "<b>   x " + item[1] + "</b>  " + item[0] + "<br>";
+      orderItemsStringSheetsFormat += "\" x "+ item[1] + " " + item[0] + "\", CHAR(10), ";
+    });
+    orderItemsStringSheetsFormat = orderItemsStringSheetsFormat.substr(0, orderItemsStringSheetsFormat.length-12);
+    orderItemsStringSheetsFormat += ")";
+    // Log the order in the spreadsheet
+    var range = ordersSheet.getRange(ordersSheet.getLastRow() + 1, 1, 1, 7);
+    var d = new Date();
+    var timeStamp = d.getTime(); 
+    var currentTime = d.toLocaleString();
+    var order = [
+      [ timeStamp, currentTime, orderItemsStringSheetsFormat, comments, name, email, phoneNumber ]
+    ];
+    range.setWrap(true); 
+    range.setValues(order);
+    var updateFormPublicURL = formLinksSheet.getDataRange().getValues()[2][1];
+    // Send Customer Email
+    MailApp.sendEmail({
+      to: email,
+      subject: "Thank you for your order " + name + "!",
+      htmlBody: "Hi " + name + "!<br><br>We've got your order and are working through it as fast as we can.<br> Your order ID is <b>" + timeStamp + "</b>.<br>We will send you an update once you know the exact pick up time.<br><br>Here are the contents of your order:" + orderItemsStringEmailFormat + "<br><br>---------------------<br><br>Please don't hesitate to reach out to use in case you have any questions, and Thank you for your order!!<br><br>" + storeName + "<br>" + storeNumber + "<br>" + storeEmail + "<br>" + storeAddress + "<br>"
+    });
+    // Send Store Email
+    MailApp.sendEmail({
+      to: storeEmail,
+      subject: "New order for " + storeName + "!",
+      htmlBody: "Hi " + storeName + "!<br><br>You've got a new order (order ID: <b>" + timeStamp + "</b>): " + orderItemsStringEmailFormat + "<br><br>Please click <a href='" + updateFormPublicURL + "'>this link</a> to update the customer on the pickup time."
+    });
+  }
   Logger.log("Order submitted & Emails sent.");
 }
 
@@ -234,7 +281,7 @@ function onOrderUpdateFormSubmit(e) {
   var storeNumber = infoData[1][4];
   var storeAddress = infoData[1][2];
   var emailBody = "Hi there " + customerName + "!<br><br>We wanted to let you know that we've started preparing your order with ID <b>" + orderID +"</b> and it will be ready for pickup by <b>" + updatedPickuptime + "</b>!";
-  if(restaurantComments != null){
+  if(restaurantComments != ""){
     emailBody += "<br><br>Note: " + restaurantComments;
   }
   emailBody += "<br><br>Please don't hesitate to reach out to use in case you have any questions, and Thank you for your order!!<br><br>" + storeName + "<br>" + storeNumber + "<br>" + storeEmail + "<br>" + storeAddress + "<br>";
@@ -245,6 +292,31 @@ function onOrderUpdateFormSubmit(e) {
   });
   Logger.log("Order Updated Email sent.");
 }
+
+function sendWelcomeEmail(storeName, storeEmail, spreadsheetUrl, formURL) {
+  MailApp.sendEmail({
+      to: storeEmail,
+      subject: "Welcome to Curbside Pickup " + storeName + " - Your Order Form is ready to be shared with your customers!",
+      htmlBody: "Hi there " + storeName + "!" +
+      "<br><br>We have just completed the creation of the Curbside Pickup Order form." +
+      "<br>To access it please click <a href='" + formURL + "'>this link</a>" +
+      "<br>And this is its link which you can share on your social media / website: " + formURL +
+      "<br><br>Don't forget about <a href='" + spreadsheetUrl + "'>your Google Sheet</a> where you can keep control over your Inventory & Orders." +
+      "<br><br>If you navigate to the tab <b>Form Links</b> you will find four links:" +
+      "<br>- 1) <b>Order Submission Form - Published Form URL</b>: This is the link you can share with your customers so that they can submit orders." +
+      "<br>- 2) <b>Order Submission Form - Form Edit URL</b>: This is the link you can use to customize your Customer Order Submission form (you can tailor the color scheme to your business or add a relevant background image)." +
+      "<br>- 3) <b>Order Update Form - Published Form URL</b>: This is the link you can use to access the form to update your customers on their orders." +
+      "<br>- 4) <b>Order Update Form - Form Edit URL</b>: This is the link you can use to customize your Order Update Form." +
+      "<br><br>Note on the Form Edit URLs: You should only share the \"Order Submission Form - Published Form URL\"link with your customers and the two Form Edit URL links are intended for changes to the color scheme / background images only. You should not use their content as it is controled through the Google Sheet and your manual changes will be overwritten." +
+      "<br><br>Welcome, and we really hope you enjoy this functionality!"
+    });
+}
+
+
+
+
+
+
 
 
 
