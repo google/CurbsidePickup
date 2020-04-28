@@ -1,4 +1,4 @@
-var googleSheetsTemplateID = '1jIBa7AdzrMOa13iZF6A7M9W2WZr_8YBRLa1SbZtiulM'
+var googleSheetsTemplateID = '1Tw9DUTV1Cr2FTXHgCCUX4ke58Xu5wqo1wN4K0FaqUwg'
 
 var inventorySheet = "Inventory";
 var infoSheet = "Info";
