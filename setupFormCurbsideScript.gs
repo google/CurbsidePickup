@@ -1,4 +1,5 @@
-var googleSheetsTemplateID = '1Tw9DUTV1Cr2FTXHgCCUX4ke58Xu5wqo1wN4K0FaqUwg'
+var googleSheetsTemplateID = '1Tw9DUTV1Cr2FTXHgCCUX4ke58Xu5wqo1wN4K0FaqUwg';
+var curbsideEmail = 'curbsidepickupsolution@gmail.com';
 
 var inventorySheet = "Inventory";
 var infoSheet = "Info";
@@ -15,12 +16,12 @@ function main() {
   var x = ScriptApp.newTrigger('copySpreadSheet').forForm(FormApp.getActiveForm()).onFormSubmit().create();
 }
 
-function copySpreadSheet(e) {
+async function copySpreadSheet(e) {
   var date = new Date();
   let formResponse = readForm(e);  
 
   // Make a copy of the template file
-  var documentId = DriveApp.getFileById(googleSheetsTemplateID).makeCopy().getId();
+  var documentId = await DriveApp.getFileById(googleSheetsTemplateID).makeCopy().getId();
  
   var ss = SpreadsheetApp.openById(documentId);
   var file = DriveApp.getFileById(documentId);
@@ -32,37 +33,21 @@ function copySpreadSheet(e) {
   var storeNumber = formResponse.get("What is the phone number you want to share so that your customers can contact you?");
 
   // Rename the copied file
-  file.setName(storeName + '\'s Curbside Pickup');
-  Logger.log('document Id: ' + documentId);
-  Logger.log('Download Url: ' + file.getDownloadUrl());
-  Logger.log('View Url: ' + file.getUrl());
+  await file.setName(storeName + '\'s Curbside Pickup');
 
   // Populate the store info sheet
-  populateStoreInfoSheet(ss, storeName, storeDescription, storePickupAddress, storeEmail, storeNumber);
-
-
-  // TODO: bypass the notification email
-  // Drive.Permissions.insert(
-  //  {
-  //    'role': 'owner',
-  //    'type': 'user',
-  //    'value': storeEmail
-  //  },
-  //  documentId,
-  //  {
-  //    'sendNotificationEmails': 'false'
-  //  });
+  await populateStoreInfoSheet(ss, storeName, storeDescription, storePickupAddress, storeEmail, storeNumber);
 
   // Transfer ownership and grant access to the copy of the spreadsheet
-  file.setStarred(true);
-  ss.addViewer(storeEmail);
-  ss.addEditor(storeEmail);
+  await file.setStarred(true);
+  await ss.addViewer(storeEmail);
+  await ss.addEditor(storeEmail);
 
   // Send email to the business with the link for the spreadsheet and instructions on the next steps.
-  sendEmail(storeName, storeEmail, file.getUrl()); 
-
-  // TODO - uncomment once github process is completed.
-  //file.setOwner(storeEmail);
+  await sendEmail(storeName, storeEmail, file.getUrl()); 
+  
+  await file.setOwner(storeEmail);  
+  await file.removeEditor(curbsideEmail);
 }
 
 function readForm(e) {
@@ -107,23 +92,3 @@ function sendEmail(storeName, storeEmail, spreadsheetUrl){
       "<br><br>You are now Curbside Pickup enabled!"
     });
 }
-
-// TODO edit the main script to send an email with all the form links in the first time the script is run
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
