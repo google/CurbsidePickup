@@ -1,5 +1,13 @@
-// Copyright 2020 Google LLC.
-// SPDX-License-Identifier: Apache-2.0
+/*Copyright 2020 Google LLC
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    https://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.*/
 
 var ss = SpreadsheetApp.getActive();
 var inventorySheet = ss.getSheetByName("Inventory");
@@ -73,7 +81,8 @@ function createOrderForm() {
   var daysOpen = infoData[1][7];
   var standardPickupTime = infoData[1][8];
   var additionalNotes = infoData[1][9];
-  var menuItemsSentence = "You can see the below list of all menu items that are currently available." + 
+  var description = infoData[1][1];
+  var menuItemsSentence = description + "\n\nYou can see the below list of all menu items that are currently available." + 
     "\nPlease select how many units of each items you want to order." + 
     "\nPrices don't include HST";
 
@@ -307,19 +316,9 @@ function sendWelcomeEmail(storeName, storeEmail, spreadsheetUrl, formURL) {
       "<br>- 2) <b>Order Submission Form - Form Edit URL</b>: This is the link you can use to customize your Customer Order Submission form (you can tailor the color scheme to your business or add a relevant background image)." +
       "<br>- 3) <b>Order Update Form - Published Form URL</b>: This is the link you can use to access the form to update your customers on their orders." +
       "<br>- 4) <b>Order Update Form - Form Edit URL</b>: This is the link you can use to customize your Order Update Form." +
-      "<br><br>Note on the Form Edit URLs: You should only share the \"Order Submission Form - Published Form URL\"link with your customers and the two Form Edit URL links are intended for changes to the color scheme / background images only. You should not use their content as it is controled through the Google Sheet and your manual changes will be overwritten." +
-      "<br><br>Welcome, and we really hope you enjoy this functionality!"
+      "<br><br>Note on the Form Edit URLs: You should only share the \"Order Submission Form - Published Form URL\"link with your customers and the two Form Edit URL links are intended for changes to the color scheme / background images only. You should not use their content as it is controlled through the Google Sheet and your manual changes will be overwritten." +
+      "<br><br><b>Remember, you agree that you are responsible for the information you collect about your customers (including their names and contact information). Please keep this information secure.</b>" +
+      "<br><br>Welcome, and we really hope you enjoy this functionality!" +
+      "<br><br><br><i>Disclaimer: This is not an official product, and is made available open-sourced as is under the Apache 2.0 license.</i>"
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
