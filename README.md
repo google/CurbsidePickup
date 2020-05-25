@@ -10,7 +10,7 @@ A simple, free Google Sheets and Google Forms solution to help Canadian small bu
 
 In three simple steps, businesses can use this workflow to get a dynamically generated Google Form link that they on their website or social media channels. Businesses can then receive orders and communicate with their customers.
 
-A detailed slide deck describing the solution is available [here]((https://docs.google.com/presentation/d/e/2PACX-1vRTQXAhwLvMtn09YRG0UEnyFQJMDwY1wpz41iSpwlOt0Ta1Hm61yEC3ACcsuk26UiQ_bKMEtRVywByM/pub?start=false&loop=false&delayms=3000&slide=id.p "Curbside Pickup Slides")).
+A detailed slide deck describing the solution is available [here](https://docs.google.com/presentation/d/e/2PACX-1vRTQXAhwLvMtn09YRG0UEnyFQJMDwY1wpz41iSpwlOt0Ta1Hm61yEC3ACcsuk26UiQ_bKMEtRVywByM/pub?start=false&loop=false&delayms=3000&slide=id.p "Curbside Pickup Slides").
 
 ## Who is it for?
 
