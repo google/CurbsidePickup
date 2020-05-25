@@ -1,3 +1,14 @@
+/*Copyright 2020 Google LLC
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    https://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.*/
+
 var googleSheetsTemplateID = '1Tw9DUTV1Cr2FTXHgCCUX4ke58Xu5wqo1wN4K0FaqUwg';
 var curbsideEmail = 'curbsidepickupsolution@gmail.com';
 
@@ -18,14 +29,14 @@ function main() {
 
 async function copySpreadSheet(e) {
   var date = new Date();
-  let formResponse = readForm(e);  
+  var formResponse = readForm(e);
 
   // Make a copy of the template file
   var documentId = await DriveApp.getFileById(googleSheetsTemplateID).makeCopy().getId();
- 
+
   var ss = SpreadsheetApp.openById(documentId);
   var file = DriveApp.getFileById(documentId);
-  
+
   var storeName = formResponse.get("What is your Business' Name");
   var storeDescription = formResponse.get("Add a brief description of your business");
   var storePickupAddress = formResponse.get("What is the address of your business that customers will use for the Curbside Pickup?");
@@ -44,29 +55,29 @@ async function copySpreadSheet(e) {
   await ss.addEditor(storeEmail);
 
   // Send email to the business with the link for the spreadsheet and instructions on the next steps.
-  await sendEmail(storeName, storeEmail, file.getUrl()); 
-  
-  await file.setOwner(storeEmail);  
+  await sendEmail(storeName, storeEmail, file.getUrl());
+
+  await file.setOwner(storeEmail);
   await file.removeEditor(curbsideEmail);
 }
 
 function readForm(e) {
-  let responseMap = new Map();
+  var responseMap = new Map();
   var itemResponses = e.response.getItemResponses();
   for (var i = 0; i < itemResponses.length; i++) {
-    var itemResponse = itemResponses[i];
+    let itemResponse = itemResponses[i];
     responseMap.set(itemResponse.getItem().getTitle(), itemResponse.getResponse());
   }
   return responseMap;
 }
 
-function populateStoreInfoSheet(ss, storeName, storeDescription, storePickupAddress, storeEmail, storeNumber) {
+async function populateStoreInfoSheet(ss, storeName, storeDescription, storePickupAddress, storeEmail, storeNumber) {
   // Log the store info in the spreadsheet
   var range = getSpecificSheet(ss,infoSheet).getRange(2, 1, 1, 5);
   var storeInfo = [
     [ storeName, storeDescription, storePickupAddress, storeEmail, storeNumber]
   ];
-  range.setWrap(true); 
+  range.setWrap(true);
   range.setValues(storeInfo);
 
 }
@@ -75,20 +86,21 @@ function getSpecificSheet(ss, sheetName){
   return ss.getSheetByName(sheetName);
 }
 
-function sendEmail(storeName, storeEmail, spreadsheetUrl){
+async function sendEmail(storeName, storeEmail, spreadsheetUrl){
   MailApp.sendEmail({
       to: storeEmail,
       subject: "Welcome to Curbside Pickup " + storeName + "!",
-      htmlBody: "Hi there " + storeName + 
-      "!<br><br>Great news to have you interested in growing your business during these dificult times by enabling Curbside Pickup!" + 
+      htmlBody: "Hi there " + storeName +
+      "!<br><br>Great news to have you interested in growing your business during these difficult times by enabling Curbside Pickup!" + 
       "<br><br>We've created a Google Sheet for you where you can have full control over your Curbside Pickup Interface & Orders." +
       "<br>Please click <a href='" + spreadsheetUrl + "'>this link</a> to access your Google Sheet and complete the process (steps below)." +
-      "<br><br>Now you just need to complete 4 very simple steps to start getting Curbside Pickyp orders:" +
+      "<br><br>Now you just need to complete 4 very simple steps to start getting Curbside Pickup orders:" +
       "<br><br> - 1) Go to the <b>Inventory</b> tab and populate it with your inventory" +
       "<br> - 2) On the <b>Navigation Bar</b> click on <b>Curbside Pickup</b> and then on <b>Authorize Curbside Pickup</b> - Please authenticate with your Google account." +
       "<br>(If you get a warning message indicating that \"This app isn't verified\", click <b>Advanced</b>, <b>Go to OrderSheet Curbside Pickup</b> and <b>Allow</b>)" +
       "<br> - 3) On the <b>Navigation Bar</b> click on <b>Curbside Pickup</b> and then on <b>Update order menu</b> (this will take about a minute to run, and for the first time you run it, you will receive an email with useful information for the last step)" +
       "<br> - 4) Open the email, copy the <b>Customer Order Form</b> link into your social media pages / website and that's it!" +
-      "<br><br>You are now Curbside Pickup enabled!"
+      "<br><br>You are now Curbside Pickup enabled!" +
+      "<br><br><br><i>Disclaimer: This is not an official product, and is made available open-sourced as is under the Apache 2.0 license.</i>"
     });
 }
